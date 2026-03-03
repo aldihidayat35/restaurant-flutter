@@ -3,10 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:restaurant_flutter/common/result_state.dart';
 import 'package:restaurant_flutter/common/theme.dart';
+import 'package:restaurant_flutter/data/datasources/database_helper.dart';
 import 'package:restaurant_flutter/data/datasources/restaurant_remote_datasource.dart';
+import 'package:restaurant_flutter/data/repositories/favorite_repository_impl.dart';
 import 'package:restaurant_flutter/data/repositories/restaurant_repository_impl.dart';
+import 'package:restaurant_flutter/domain/entities/restaurant.dart';
 import 'package:restaurant_flutter/domain/entities/restaurant_detail.dart';
+import 'package:restaurant_flutter/domain/usecases/favorite_usecases.dart';
 import 'package:restaurant_flutter/domain/usecases/get_restaurant_detail.dart';
+import 'package:restaurant_flutter/presentation/providers/favorite_provider.dart';
 import 'package:restaurant_flutter/presentation/providers/restaurant_detail_provider.dart';
 import 'package:restaurant_flutter/presentation/widgets/error_widget.dart';
 import 'package:restaurant_flutter/presentation/widgets/loading_shimmer.dart';
@@ -18,21 +23,38 @@ class RestaurantDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => RestaurantDetailProvider(
-        getRestaurantDetail: GetRestaurantDetail(
-          RestaurantRepositoryImpl(
-            remoteDataSource: RestaurantRemoteDataSource(),
-          ),
+    final dbHelper = DatabaseHelper();
+    final favoriteRepo = FavoriteRepositoryImpl(databaseHelper: dbHelper);
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => RestaurantDetailProvider(
+            getRestaurantDetail: GetRestaurantDetail(
+              RestaurantRepositoryImpl(
+                remoteDataSource: RestaurantRemoteDataSource(),
+              ),
+            ),
+          )..fetchRestaurantDetail(restaurantId),
         ),
-      )..fetchRestaurantDetail(restaurantId),
-      child: const _RestaurantDetailView(),
+        ChangeNotifierProvider(
+          create: (_) => FavoriteProvider(
+            getFavorites: GetFavorites(favoriteRepo),
+            addFavorite: AddFavorite(favoriteRepo),
+            removeFavorite: RemoveFavorite(favoriteRepo),
+            checkIsFavorite: CheckIsFavorite(favoriteRepo),
+          )..checkFavoriteStatus(restaurantId),
+        ),
+      ],
+      child: _RestaurantDetailView(restaurantId: restaurantId),
     );
   }
 }
 
 class _RestaurantDetailView extends StatelessWidget {
-  const _RestaurantDetailView();
+  final String restaurantId;
+
+  const _RestaurantDetailView({required this.restaurantId});
 
   @override
   Widget build(BuildContext context) {
@@ -44,19 +66,14 @@ class _RestaurantDetailView extends StatelessWidget {
             ResultLoaded<RestaurantDetail>(data: final detail) =>
               _DetailContentView(detail: detail),
             ResultError(message: final message) => Scaffold(
-              appBar: AppBar(),
-              body: AppErrorWidget(
-                message: message,
-                onRetry: () {
-                  final id = context
-                      .findAncestorWidgetOfExactType<RestaurantDetailPage>()
-                      ?.restaurantId;
-                  if (id != null) {
-                    provider.fetchRestaurantDetail(id);
-                  }
-                },
+                appBar: AppBar(),
+                body: AppErrorWidget(
+                  message: message,
+                  onRetry: () {
+                    provider.fetchRestaurantDetail(restaurantId);
+                  },
+                ),
               ),
-            ),
           };
         },
       ),
@@ -86,7 +103,50 @@ class _DetailContentView extends StatelessWidget {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
 
-    return CustomScrollView(
+    return Scaffold(
+      floatingActionButton: Consumer<FavoriteProvider>(
+        builder: (context, favProvider, child) {
+          return FloatingActionButton(
+            onPressed: () {
+              final restaurant = Restaurant(
+                id: detail.id,
+                name: detail.name,
+                description: detail.description,
+                pictureId: detail.pictureId,
+                city: detail.city,
+                rating: detail.rating,
+              );
+              favProvider.toggleFavorite(restaurant);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    favProvider.isFavorite
+                        ? 'Removed from favorites'
+                        : 'Added to favorites',
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+            },
+            backgroundColor: theme.colorScheme.primary,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: Icon(
+                favProvider.isFavorite
+                    ? Icons.favorite_rounded
+                    : Icons.favorite_border_rounded,
+                key: ValueKey(favProvider.isFavorite),
+                color: Colors.white,
+              ),
+            ),
+          );
+        },
+      ),
+      body: CustomScrollView(
       slivers: [
         // Hero Image AppBar
         SliverAppBar(
@@ -217,6 +277,7 @@ class _DetailContentView extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 

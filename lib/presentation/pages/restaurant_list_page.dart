@@ -4,7 +4,6 @@ import 'package:restaurant_flutter/common/result_state.dart';
 import 'package:restaurant_flutter/domain/entities/restaurant.dart';
 import 'package:restaurant_flutter/presentation/pages/restaurant_detail_page.dart';
 import 'package:restaurant_flutter/presentation/providers/restaurant_list_provider.dart';
-import 'package:restaurant_flutter/presentation/providers/theme_provider.dart';
 import 'package:restaurant_flutter/presentation/widgets/error_widget.dart';
 import 'package:restaurant_flutter/presentation/widgets/loading_shimmer.dart';
 import 'package:restaurant_flutter/presentation/widgets/restaurant_card.dart';
@@ -21,34 +20,21 @@ class RestaurantListPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Restaurant',
-                          style: theme.textTheme.headlineLarge,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Recommendation restaurant for you!',
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
+                  Text('Restaurant', style: theme.textTheme.headlineLarge),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Recommendation restaurant for you!',
+                    style: theme.textTheme.bodyMedium,
                   ),
-                  _buildThemeToggle(context),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            // Content
             Expanded(
               child: Consumer<RestaurantListProvider>(
                 builder: (context, provider, child) {
@@ -57,48 +43,14 @@ class RestaurantListPage extends StatelessWidget {
                     ResultLoaded<List<Restaurant>>(data: final restaurants) =>
                       _buildRestaurantList(context, restaurants, provider),
                     ResultError(message: final message) => AppErrorWidget(
-                      message: message,
-                      onRetry: () => provider.fetchRestaurantList(),
-                    ),
+                        message: message,
+                        onRetry: () => provider.fetchRestaurantList(),
+                      ),
                   };
                 },
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildThemeToggle(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final theme = Theme.of(context);
-
-    return GestureDetector(
-      onTap: () => themeProvider.toggleTheme(),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (child, animation) {
-            return RotationTransition(
-              turns: Tween(begin: 0.75, end: 1.0).animate(animation),
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          },
-          child: Icon(
-            themeProvider.isDarkMode
-                ? Icons.light_mode_rounded
-                : Icons.dark_mode_rounded,
-            key: ValueKey(themeProvider.isDarkMode),
-            color: theme.colorScheme.primary,
-            size: 22,
-          ),
         ),
       ),
     );
