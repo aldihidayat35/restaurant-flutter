@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:flutter_timezone/flutter_timezone.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -15,9 +15,14 @@ class NotificationHelper {
   static const String _channelDesc = 'Daily lunch reminder notification';
 
   static Future<void> initNotifications() async {
-    tz.initializeTimeZones();
-    final String timeZoneName = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(timeZoneName));
+    try {
+      tzdata.initializeTimeZones();
+      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+    } catch (_) {
+      tzdata.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+    }
 
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');

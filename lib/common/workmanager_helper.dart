@@ -18,7 +18,7 @@ void callbackDispatcher() {
 
 class WorkManagerHelper {
   static Future<void> init() async {
-    await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+    await Workmanager().initialize(callbackDispatcher);
   }
 
   static Future<void> registerDailyReminder() async {
@@ -28,7 +28,7 @@ class WorkManagerHelper {
       frequency: const Duration(hours: 24),
       initialDelay: _calculateInitialDelay(),
       constraints: Constraints(networkType: NetworkType.connected),
-      existingWorkPolicy: ExistingWorkPolicy.replace,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
     );
   }
 

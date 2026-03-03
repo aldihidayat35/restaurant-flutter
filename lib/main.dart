@@ -17,8 +17,12 @@ import 'package:restaurant_flutter/presentation/providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationHelper.initNotifications();
-  await WorkManagerHelper.init();
+  try {
+    await NotificationHelper.initNotifications();
+    await WorkManagerHelper.init();
+  } catch (_) {
+    // Notifications/WorkManager may fail on some platforms
+  }
   runApp(const MyApp());
 }
 
